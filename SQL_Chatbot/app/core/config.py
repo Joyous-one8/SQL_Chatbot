@@ -1,3 +1,4 @@
+import urllib.parse
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
@@ -6,10 +7,14 @@ class Settings(BaseSettings):
     App configuration schema.
     Loads variables from local environment or .env file automatically.
     """
-    # Database Configurations
-    DB_SERVER: str = Field(default="localhost", description="MS SQL Server Host")
-    DB_NAME: str = Field(default="AdventureWorks2022", description="Target Database")
+    # Database Server Configurations
+    DB_SERVER: str = Field(..., description="Azure SQL Server Host (e.g., your-server.database.windows.net)")
+    DB_NAME: str = Field(default="AdventureWorks", description="Target Database")
     DB_DRIVER: str = Field(default="ODBC Driver 17 for SQL Server", description="Native ODBC Driver")
+    
+    # Database Security (Added for Azure Authentication)
+    DB_USERNAME: str = Field(..., description="Azure SQL Server Admin/User Username")
+    DB_PASSWORD: str = Field(..., description="Azure SQL Server User Password")
     
     # LLM Security
     GEMINI_API_KEY: str = Field(..., description="Google Gemini API Key - Required")
@@ -17,16 +22,27 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        """Dynamically builds the SQLAlchemy connection string for MS SQL."""
-        import urllib
-        # Using a quoted string makes instance paths like KANISHKA\SQLEXPRESS completely safe for pyodbc
-        params = urllib.parse.quote_plus(
+        """
+        Dynamically builds the SQLAlchemy connection string for Azure SQL Server
+        using SQL Server Authentication.
+        """
+        # Drop 'Trusted_Connection' and supply UID/PWD parameters for Azure authentication
+        connection_string = (
             f"DRIVER={self.DB_DRIVER};"
             f"SERVER={self.DB_SERVER};"
             f"DATABASE={self.DB_NAME};"
-            f"Trusted_Connection=yes;"
+            f"UID={self.DB_USERNAME};"
+            f"PWD={self.DB_PASSWORD};"
+            f"Encrypt=yes;"                  # Encrypt connection to protect transit data
+            f"TrustServerCertificate=no;"    # Use default secure trust rules
+            f"Connection Timeout=30;"
         )
-        return f"mssql+pyodbc:///?odbc_connect={params}"
+        
+        # Quote only the password to protect it if it has special characters (like '@' or '/')
+        safe_password = urllib.parse.quote_plus(self.DB_PASSWORD)
+
+        # Return the clean pymssql URL
+        return f"mssql+pymssql://{self.DB_USERNAME}:{safe_password}@{self.DB_SERVER}/{self.DB_NAME}"
 
     # Read .env file if it exists
     model_config = SettingsConfigDict(
