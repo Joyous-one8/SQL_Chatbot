@@ -34,15 +34,14 @@ class Settings(BaseSettings):
         encoded correctly and can never produce a malformed authority section —
         this is what was causing the "invalid literal for int()" parsing error.
         """
-        url = URL.create(
-            drivername="mssql+pymssql",
-            username=self.DB_USERNAME,
-            password=self.DB_PASSWORD,  # URL.create() encodes this internally; do not pre-encode it yourself
-            host=self.DB_SERVER,
-            port=self.DB_PORT,
-            database=self.DB_NAME,
-        )
-        return str(url)
+        return URL.create(
+        drivername="mssql+pymssql",
+        username=self.DB_USERNAME,
+        password=self.DB_PASSWORD,
+        host=self.DB_SERVER,
+        port=self.DB_PORT,
+        database=self.DB_NAME,
+    )
 
     # Read .env file if it exists
     model_config = SettingsConfigDict(
