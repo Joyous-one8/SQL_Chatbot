@@ -1,0 +1,9 @@
+SQL_Chatbot/venv/
+SQL_Chatbot/__pycache__/
+SQL_Chatbot/*.pyc/
+SQL_Chatbot/.env
+
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.env
+Frontend/.env.local
